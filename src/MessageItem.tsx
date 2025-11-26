@@ -1,10 +1,12 @@
 import { useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { encodeReaction, decodeReaction } from "./reactionUtils";
+import {
+  KNOWN_REACTION_TYPES,
+  encodeReaction,
+  decodeReaction,
+} from "./reactionUtils";
 import { MessageWithReactions } from "../convex/messages";
 import { Id } from "../convex/_generated/dataModel";
-
-const COMMON_REACTIONS = ["👍", "❤️", "😂", "😮", "😢"];
 
 export function MessageItem(props: {
   message: MessageWithReactions;
@@ -36,7 +38,7 @@ export function MessageItem(props: {
       </div>
       <p className="text-dark dark:text-light mb-2">{message.content}</p>
       <div className="flex gap-2 flex-wrap">
-        {COMMON_REACTIONS.map((reaction) => {
+        {KNOWN_REACTION_TYPES.map((reaction) => {
           const encodedReaction = encodeReaction(reaction);
           const count = counts[encodedReaction] ?? 0;
           const isActive = userReactions.some(
