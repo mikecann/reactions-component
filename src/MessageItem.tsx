@@ -2,10 +2,14 @@ import { useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { encodeReaction, decodeReaction } from "./reactionUtils";
 import { MessageWithReactions } from "../convex/messages";
+import { Id } from "../convex/_generated/dataModel";
 
 const COMMON_REACTIONS = ["👍", "❤️", "😂", "😮", "😢"];
 
-export function MessageItem(props: { message: MessageWithReactions }) {
+export function MessageItem(props: {
+  message: MessageWithReactions;
+  meUserId: Id<"users">;
+}) {
   const { user, message, reactions } = props.message;
   const toggleReaction = useMutation(api.messages.toggleReaction);
   const deleteMessage = useMutation(api.messages.deleteMessage);
@@ -45,7 +49,7 @@ export function MessageItem(props: { message: MessageWithReactions }) {
                 if (!user?._id) return;
                 void toggleReaction({
                   messageId: message._id,
-                  userId: user._id,
+                  userId: props.meUserId,
                   reaction: encodedReaction,
                 });
               }}

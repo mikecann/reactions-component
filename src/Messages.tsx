@@ -4,15 +4,16 @@ import { useState } from "react";
 import { Id } from "../convex/_generated/dataModel";
 import { MessageItem } from "./MessageItem";
 
-export function Messages({ userId }: { userId: Id<"users"> }) {
+export function Messages({ meUserId }: { meUserId: Id<"users"> }) {
   const [inputValue, setInputValue] = useState("");
   const messages =
-    useQuery(api.messages.listMessagesWithReactions, { userId }) ?? [];
+    useQuery(api.messages.listMessagesWithReactions, { userId: meUserId }) ??
+    [];
   const createMessage = useMutation(api.messages.createMessage);
 
   const handleSubmit = () => {
     if (inputValue.trim() === "") return;
-    void createMessage({ content: inputValue.trim(), byUserId: userId });
+    void createMessage({ content: inputValue.trim(), byUserId: meUserId });
     setInputValue("");
   };
 
@@ -39,7 +40,11 @@ export function Messages({ userId }: { userId: Id<"users"> }) {
           </p>
         ) : (
           messages.map((message) => (
-            <MessageItem key={message.message._id} message={message} />
+            <MessageItem
+              key={message.message._id}
+              message={message}
+              meUserId={meUserId}
+            />
           ))
         )}
       </div>

@@ -70,14 +70,14 @@ export const listMessagesWithReactions = query({
   args: {
     userId: v.id("users"),
   },
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
     const messages = await ctx.db.query("messages").collect();
 
     const messagesWithReactions = await Promise.all(
       messages.map(async (message) => {
         const reactions = await ctx.runQuery(
           components.reactions.reactions.getReactionsForContentAndUserReactions,
-          { contentId: message._id, userId: message.byUserId },
+          { contentId: message._id, userId: args.userId },
         );
         return {
           user: await ctx.db.get(message.byUserId),
