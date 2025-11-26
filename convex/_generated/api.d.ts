@@ -46,4 +46,21 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  reactions: {
+    reactions: {
+      getReactionsForContent: FunctionReference<
+        "query",
+        "internal",
+        { contentId: string },
+        any
+      >;
+      toggleReaction: FunctionReference<
+        "mutation",
+        "internal",
+        { byUserId: string; contentId: string; reaction: string },
+        any
+      >;
+    };
+  };
+};

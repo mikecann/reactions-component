@@ -24,24 +24,17 @@ import type { FunctionReference } from "convex/server";
 export type ComponentApi<Name extends string | undefined = string | undefined> =
   {
     reactions: {
-      addReaction: FunctionReference<
-        "mutation",
-        "internal",
-        { contentId: string; count: number; reaction: string },
-        any,
-        Name
-      >;
-      getReactions: FunctionReference<
+      getReactionsForContent: FunctionReference<
         "query",
         "internal",
         { contentId: string },
         any,
         Name
       >;
-      removeReaction: FunctionReference<
+      toggleReaction: FunctionReference<
         "mutation",
         "internal",
-        { contentId: string; count: number; reaction: string },
+        { byUserId: string; contentId: string; reaction: string },
         any,
         Name
       >;

@@ -1,52 +1,107 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { DatabaseWriter, mutation, query, QueryCtx } from "./_generated/server";
 
-export const getReactions = query({
-  args: { contentId: v.id("content") },
+export const getReactionsForContent = query({
+  args: { contentId: v.string() },
   handler: async (ctx, args) => {
-    return ctx.db.query("reactions").collect();
-  },
-});
-
-export const addReaction = mutation({
-  args: { contentId: v.id("content"), reaction: v.string(), count: v.number() },
-  handler: async (ctx, args) => {
-    const reaction = await ctx.db
-      .query("reactions")
+    const counts = await ctx.db
+      .query("reactionCounts")
       .withIndex("by_contentId", (q) => q.eq("contentId", args.contentId))
       .first();
 
-    if (!reaction)
-      await ctx.db.insert("reactions", {
+    const userReactions = await ctx.db
+      .query("reactions")
+      .withIndex("by_contentId_byUserId", (q) =>
+        q.eq("contentId", args.contentId),
+      )
+      .collect();
+
+    return {
+      counts,
+      userReactions,
+    };
+  },
+});
+
+const _incrementReactionCount = async (
+  db: DatabaseWriter,
+  { contentId, reaction }: { contentId: string; reaction: string },
+) => {
+  const counts = await db
+    .query("reactionCounts")
+    .withIndex("by_contentId", (q) => q.eq("contentId", contentId))
+    .first();
+
+  if (!counts)
+    return await db.insert("reactionCounts", {
+      contentId,
+      reactions: { [reaction]: 1 },
+    });
+
+  await db.patch(counts._id, {
+    reactions: {
+      ...counts.reactions,
+      [reaction]: (counts.reactions[reaction] ?? 0) + 1,
+    },
+  });
+};
+
+const _decrementReactionCount = async (
+  db: DatabaseWriter,
+  { contentId, reaction }: { contentId: string; reaction: string },
+) => {
+  const counts = await db
+    .query("reactionCounts")
+    .withIndex("by_contentId", (q) => q.eq("contentId", contentId))
+    .first();
+
+  if (!counts) return null;
+
+  await db.patch(counts._id, {
+    reactions: {
+      ...counts.reactions,
+      [reaction]: (counts.reactions[reaction] ?? 1) - 1,
+    },
+  });
+};
+
+export const toggleReaction = mutation({
+  args: {
+    contentId: v.string(),
+    byUserId: v.string(),
+    reaction: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const reactionFromUser = await ctx.db
+      .query("reactions")
+      .withIndex("by_contentId_byUserId", (q) =>
+        q.eq("contentId", args.contentId).eq("byUserId", args.byUserId),
+      )
+      .first();
+
+    // A user cant add the same reaction twice
+    if (reactionFromUser) {
+      // Decrement the reaction count
+      await _decrementReactionCount(ctx.db, {
         contentId: args.contentId,
-        reactions: { [args.reaction]: args.count },
+        reaction: args.reaction,
       });
-    else
-      await ctx.db.patch(reaction._id, {
-        reactions: {
-          ...reaction.reactions,
-          [args.reaction]:
-            (reaction.reactions[args.reaction] ?? 0) + args.count,
-        },
-      });
-  },
-});
 
-export const removeReaction = mutation({
-  args: { contentId: v.id("content"), reaction: v.string(), count: v.number() },
-  handler: async (ctx, args) => {
-    const reaction = await ctx.db
-      .query("reactions")
-      .withIndex("by_contentId", (q) => q.eq("contentId", args.contentId))
-      .first();
+      // Delete the reaction from the user
+      await ctx.db.delete(reactionFromUser._id);
+    }
 
-    if (!reaction) return null;
+    // Otherwise, increment the reaction count
+    await _incrementReactionCount(ctx.db, {
+      contentId: args.contentId,
+      reaction: args.reaction,
+    });
 
-    await ctx.db.patch(reaction._id, {
-      reactions: {
-        ...reaction.reactions,
-        [args.reaction]: reaction.reactions[args.reaction] - args.count,
-      },
+    // And add the reaction from the user
+    await ctx.db.insert("reactions", {
+      contentId: args.contentId,
+      byUserId: args.byUserId,
+      reaction: args.reaction,
     });
   },
 });
