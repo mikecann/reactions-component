@@ -6,7 +6,8 @@ import { MessageItem } from "./MessageItem";
 
 export function Messages({ userId }: { userId: Id<"users"> }) {
   const [inputValue, setInputValue] = useState("");
-  const messages = useQuery(api.messages.listMessagesWithReactions) ?? [];
+  const messages =
+    useQuery(api.messages.listMessagesWithReactions, { userId }) ?? [];
   const createMessage = useMutation(api.messages.createMessage);
 
   const handleSubmit = () => {

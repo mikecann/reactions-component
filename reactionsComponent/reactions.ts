@@ -1,8 +1,13 @@
 import { v } from "convex/values";
-import { DatabaseWriter, mutation, query, QueryCtx } from "./_generated/server";
+import { DatabaseWriter, mutation, query } from "./_generated/server";
+import { vv } from "./schema";
 
-export const getReactionsForContent = query({
-  args: { contentId: v.string() },
+export const getReactionsForContentAndUserReactions = query({
+  args: { contentId: v.string(), userId: v.string() },
+  returns: v.object({
+    counts: v.record(v.string(), v.number()),
+    userReactions: v.array(vv.doc("reactions")),
+  }),
   handler: async (ctx, args) => {
     const counts = await ctx.db
       .query("reactionCounts")
@@ -12,12 +17,12 @@ export const getReactionsForContent = query({
     const userReactions = await ctx.db
       .query("reactions")
       .withIndex("by_contentId_byUserId", (q) =>
-        q.eq("contentId", args.contentId),
+        q.eq("contentId", args.contentId).eq("byUserId", args.userId),
       )
       .collect();
 
     return {
-      counts,
+      counts: counts?.reactions ?? {},
       userReactions,
     };
   },
@@ -71,11 +76,15 @@ export const toggleReaction = mutation({
     byUserId: v.string(),
     reaction: v.string(),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const reactionFromUser = await ctx.db
       .query("reactions")
-      .withIndex("by_contentId_byUserId", (q) =>
-        q.eq("contentId", args.contentId).eq("byUserId", args.byUserId),
+      .withIndex("by_contentId_byUserId_reaction", (q) =>
+        q
+          .eq("contentId", args.contentId)
+          .eq("byUserId", args.byUserId)
+          .eq("reaction", args.reaction),
       )
       .first();
 
@@ -89,6 +98,8 @@ export const toggleReaction = mutation({
 
       // Delete the reaction from the user
       await ctx.db.delete(reactionFromUser._id);
+
+      return;
     }
 
     // Otherwise, increment the reaction count
@@ -103,5 +114,33 @@ export const toggleReaction = mutation({
       byUserId: args.byUserId,
       reaction: args.reaction,
     });
+  },
+});
+
+export const deleteReactionsForContent = mutation({
+  args: {
+    contentId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const reactions = await ctx.db
+      .query("reactions")
+      .withIndex("by_contentId_byUserId", (q) =>
+        q.eq("contentId", args.contentId),
+      )
+      .collect();
+
+    for (const reaction of reactions) {
+      await ctx.db.delete(reaction._id);
+    }
+
+    const counts = await ctx.db
+      .query("reactionCounts")
+      .withIndex("by_contentId", (q) => q.eq("contentId", args.contentId))
+      .first();
+
+    if (counts) {
+      await ctx.db.delete(counts._id);
+    }
   },
 });

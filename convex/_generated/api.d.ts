@@ -49,17 +49,32 @@ export declare const internal: FilterApi<
 export declare const components: {
   reactions: {
     reactions: {
-      getReactionsForContent: FunctionReference<
-        "query",
+      deleteReactionsForContent: FunctionReference<
+        "mutation",
         "internal",
         { contentId: string },
-        any
+        null
+      >;
+      getReactionsForContentAndUserReactions: FunctionReference<
+        "query",
+        "internal",
+        { contentId: string; userId: string },
+        {
+          counts: Record<string, number>;
+          userReactions: Array<{
+            _creationTime: number;
+            _id: string;
+            byUserId: string;
+            contentId: string;
+            reaction: string;
+          }>;
+        }
       >;
       toggleReaction: FunctionReference<
         "mutation",
         "internal",
         { byUserId: string; contentId: string; reaction: string },
-        any
+        null
       >;
     };
   };

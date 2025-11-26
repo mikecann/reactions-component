@@ -37,24 +37,47 @@ export const toggleReaction = mutation({
     return await ctx.runMutation(
       components.reactions.reactions.toggleReaction,
       {
-        contentId: String(args.messageId),
-        byUserId: String(args.userId),
+        contentId: args.messageId,
+        byUserId: args.userId,
         reaction: args.reaction,
       },
     );
   },
 });
 
+export const deleteMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+
+    await ctx.runMutation(
+      components.reactions.reactions.deleteReactionsForContent,
+      {
+        contentId: String(args.messageId),
+      },
+    );
+
+    await ctx.db.delete(args.messageId);
+    return null;
+  },
+});
+
 export const listMessagesWithReactions = query({
-  args: {},
+  args: {
+    userId: v.id("users"),
+  },
   handler: async (ctx) => {
     const messages = await ctx.db.query("messages").collect();
 
     const messagesWithReactions = await Promise.all(
       messages.map(async (message) => {
         const reactions = await ctx.runQuery(
-          components.reactions.reactions.getReactionsForContent,
-          { contentId: String(message._id) },
+          components.reactions.reactions.getReactionsForContentAndUserReactions,
+          { contentId: message._id, userId: message.byUserId },
         );
         return {
           user: await ctx.db.get(message.byUserId),

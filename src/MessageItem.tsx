@@ -8,26 +8,36 @@ const COMMON_REACTIONS = ["👍", "❤️", "😂", "😮", "😢"];
 export function MessageItem(props: { message: MessageWithReactions }) {
   const { user, message, reactions } = props.message;
   const toggleReaction = useMutation(api.messages.toggleReaction);
+  const deleteMessage = useMutation(api.messages.deleteMessage);
 
-  const counts = reactions?.counts?.reactions ?? {};
+  const counts: Record<string, number> = reactions?.counts ?? {};
   const userReactions = reactions?.userReactions ?? [];
-  const userReaction = userReactions.find(
-    (r: { byUserId: string }) => r.byUserId === user?._id,
-  );
 
   return (
     <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700">
-      <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
-        <span className="font-semibold">{user?.name ?? "Unknown"}</span> ·{" "}
-        {new Date(message._creationTime).toLocaleString()}
-      </p>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          <span className="font-semibold">{user?.name ?? "Unknown"}</span> ·{" "}
+          {new Date(message._creationTime).toLocaleString()}
+        </p>
+        <button
+          onClick={() => {
+            void deleteMessage({ messageId: message._id });
+          }}
+          className="text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1"
+          title="Delete message"
+        >
+          🗑️
+        </button>
+      </div>
       <p className="text-dark dark:text-light mb-2">{message.content}</p>
       <div className="flex gap-2 flex-wrap">
         {COMMON_REACTIONS.map((reaction) => {
           const encodedReaction = encodeReaction(reaction);
           const count = counts[encodedReaction] ?? 0;
-          const isActive =
-            userReaction && decodeReaction(userReaction.reaction) === reaction;
+          const isActive = userReactions.some(
+            (ur) => decodeReaction(ur.reaction) === reaction,
+          );
           return (
             <button
               key={reaction}
