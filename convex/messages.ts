@@ -2,6 +2,9 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { api, components } from "./_generated/api";
 import { FunctionReturnType } from "convex/server";
+import { ReactionsClient } from "../reactionsComponent/ReactionsClient";
+
+const reactions = new ReactionsClient(components.reactions);
 
 export const login = mutation({
   args: {
@@ -34,14 +37,10 @@ export const toggleReaction = mutation({
     reaction: v.string(),
   },
   handler: async (ctx, args) => {
-    return await ctx.runMutation(
-      components.reactions.reactions.toggleReaction,
-      {
-        contentId: args.messageId,
-        byUserId: args.userId,
-        reaction: args.reaction,
-      },
-    );
+    return await reactions.forContent(args.messageId).toggle(ctx, {
+      byUserId: args.userId,
+      reaction: args.reaction,
+    });
   },
 });
 
@@ -53,14 +52,7 @@ export const deleteMessage = mutation({
   handler: async (ctx, args) => {
     const message = await ctx.db.get(args.messageId);
     if (!message) throw new Error("Message not found");
-
-    await ctx.runMutation(
-      components.reactions.reactions.deleteReactionsForContent,
-      {
-        contentId: String(args.messageId),
-      },
-    );
-
+    await reactions.forContent(args.messageId).deleteAll(ctx);
     await ctx.db.delete(args.messageId);
     return null;
   },
@@ -75,14 +67,12 @@ export const listMessagesWithReactions = query({
 
     const messagesWithReactions = await Promise.all(
       messages.map(async (message) => {
-        const reactions = await ctx.runQuery(
-          components.reactions.reactions.getReactionsForContentAndUserReactions,
-          { contentId: message._id, userId: args.userId },
-        );
         return {
           user: await ctx.db.get(message.byUserId),
           message,
-          reactions,
+          reactions: await reactions.forContent(message._id).getReactions(ctx, {
+            userId: args.userId,
+          }),
         };
       }),
     );

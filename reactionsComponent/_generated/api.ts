@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as ReactionsClient from "../ReactionsClient.js";
 import type * as reactionTypes from "../reactionTypes.js";
 import type * as reactions from "../reactions.js";
 
@@ -19,6 +20,7 @@ import type {
 import { anyApi, componentsGeneric } from "convex/server";
 
 const fullApi: ApiFromModules<{
+  ReactionsClient: typeof ReactionsClient;
   reactionTypes: typeof reactionTypes;
   reactions: typeof reactions;
 }> = anyApi as any;
