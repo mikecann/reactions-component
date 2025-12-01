@@ -1,3 +1,5 @@
+[![Authoring You Own Convex Components Changes the Game for Backend Development!](https://thumbs.video-to-markdown.com/81ae15ed.jpg)](https://youtu.be/H4JiHUxZZ6k)
+
 # Reactions Component Demo
 
 A demo Convex Component built for educational purposes as part of a video tutorial on Component Authoring.
