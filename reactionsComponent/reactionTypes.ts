@@ -24,3 +24,4 @@ export function decodeReaction(encoded: string): string {
   // Browser frontend
   return decodeURIComponent(atob(encoded));
 }
+
